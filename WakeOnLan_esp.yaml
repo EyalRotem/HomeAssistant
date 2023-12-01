@@ -1,0 +1,74 @@
+substitutions:
+  plug_name: "wakeonlandevice"
+
+esphome:
+  name: ${plug_name}
+  platform: ESP8266
+  board: d1_mini
+  on_boot:
+    priority: 600
+    then:
+      - delay: 10min
+      - button.press : wol_button
+      - delay: 30s
+      - button.press : wol_button
+      - delay: 30s
+      - button.press : shutdown_button
+  
+wifi:
+  networks:
+    - ssid: !secret wifi_ssid
+      password: !secret wifi_password
+      priority: 2
+    - ssid: !secret backup_wifi_ssid
+      password: !secret backup_wifi_password
+      priority: 1
+  reboot_timeout: 1800s
+
+  manual_ip:
+    static_ip: !secret network_ip_wol
+    gateway: !secret network_gateway
+    subnet: !secret network_mask
+
+button:
+  - platform: wake_on_lan
+    id: wol_button
+    name: "Start the Server"
+    target_mac_address: !secret pc_mac
+    on_press:
+      - logger.log: "WOL sent"
+    
+    # Switch to restart the device
+  - platform: restart
+    name: "${plug_name} Restart"
+    # Switch to shutdown the device
+  - platform: shutdown
+    id: shutdown_button
+    name: "${plug_name} Shutdown"
+      
+logger:
+  level: DEBUG
+
+api:
+  encryption:
+    key: !secret wol_key
+
+ota:
+  password: !secret device_password
+  
+sensor:
+  - platform: wifi_signal
+    name: "${plug_name} WiFi Signal"
+    update_interval: 60s
+    
+# Text sensors with general information
+text_sensor:
+  - platform: version
+    name: "${plug_name} Version"
+  - platform: wifi_info
+    ip_address:
+      name: "${plug_name} IP"
+    ssid:
+      name: "${plug_name} SSID"
+    bssid:
+      name: "${plug_name} BSSID"
